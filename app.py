@@ -1,32 +1,50 @@
-from flask import Flask, request,jsonify
+from flask import Flask, request, jsonify
 import requests
 
 app = Flask(__name__)
 
-
-@app.route('/',methods=['POST'])
-
+# Webhook route for Dialogflow
+@app.route('/', methods=['POST'])
 def index():
-    data = request.get_json()
-    source_currency = data['queryResult']['parameters']['unit-currency']['currency']
-    amount = data['queryResult']['parameters']['unit-currency']['amount']
-    target_currency = data['queryResult']['parameters']['currency-name']
+    try:
+        # Extract data from Dialogflow's request
+        data = request.get_json()
+        source_currency = data['queryResult']['parameters']['unit-currency']['currency']
+        amount = data['queryResult']['parameters']['unit-currency']['amount']
+        target_currency = data['queryResult']['parameters']['currency-name']
 
+        # Fetch conversion rate
+        cf = fetch_conversion_factor(source_currency, target_currency)
 
-    cf = fetch_conversion_factor(source_currency, target_currency)
-    final_amount = amount*cf
+        if cf is None:
+            return jsonify({'fulfillmentText': "Sorry, I couldn't fetch the exchange rate at the moment."})
 
-    response = {
-        'fulfillmentText':"{} {} is {} {}".format(amount,source_currency,final_amount,target_currency)
-    }
-    return jsonify(response)
+        final_amount = round(amount * cf, 2)
 
+        # Response for Dialogflow
+        response = {
+            'fulfillmentText': "{} {} is approximately {} {}".format(amount, source_currency, final_amount, target_currency)
+        }
+        return jsonify(response)
+
+    except Exception as e:
+        return jsonify({'fulfillmentText': "An error occurred: {}".format(str(e))})
+
+# Function to fetch exchange rates from CurrencyFreaks API
 def fetch_conversion_factor(source, target):
-    url = "https://api.currencyfreaks.com/v2.0/rates/latest?apikey=2aeff7dd1ab84fcba58d4b8606530379".format(source,target)
+    api_key = "2aeff7dd1ab84fcba58d4b8606530379"
+    url = f"https://api.currencyfreaks.com/v2.0/rates/latest?apikey={api_key}"
 
     response = requests.get(url)
-    response = response.json()
-    return response['{}_{}'.format(source,target )]
-   
+    if response.status_code != 200:
+        return None
+
+    data = response.json()
+    rates = data.get("rates", {})
+
+    if target in rates:
+        return float(rates[target])
+    return None
+
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=True)
