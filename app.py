@@ -10,13 +10,22 @@ def fetch_conversion_factor(source, target):
     response = requests.get(url)
     data = response.json()
 
-    # Extract conversion rate safely
-    if "rates" in data and source in data["rates"] and target in data["rates"]:
-        source_rate = float(data["rates"][source])
-        target_rate = float(data["rates"][target])
-        return target_rate / source_rate  # Conversion factor
-    else:
-        return None  # Handle missing currency
+    # Debugging: Print API response structure
+    print("API Response:", data)
+
+    # Ensure API returns rates
+    if "rates" in data:
+        rates = data["rates"]
+
+        if source in rates and target in rates:
+            source_rate = float(rates[source])
+            target_rate = float(rates[target])
+
+            return target_rate / source_rate  # Conversion factor
+        else:
+            return None  # Invalid currency
+
+    return None  # Handle API structure errors
 
 @app.route("/", methods=["POST"])
 def index():
@@ -24,14 +33,14 @@ def index():
         data = request.get_json()
 
         # Extract values safely
-        source_currency = data['queryResult']['parameters']['unit-currency']['currency']
+        source_currency = data['queryResult']['parameters']['unit-currency']['currency'].upper()
         amount = data['queryResult']['parameters']['unit-currency']['amount']
-        target_currency = data['queryResult']['parameters']['currency-name']
+        target_currency = data['queryResult']['parameters']['currency-name'].upper()
 
         # Get conversion factor
         cf = fetch_conversion_factor(source_currency, target_currency)
         if cf is None:
-            return jsonify({"fulfillmentText": "Invalid currency or conversion not available."})
+            return jsonify({"fulfillmentText": "Invalid currency or conversion rate not available."})
 
         final_amount = round(amount * cf, 2)
 
