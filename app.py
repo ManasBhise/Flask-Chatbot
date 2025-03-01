@@ -10,8 +10,7 @@ def fetch_conversion_rate(source, target):
     response = requests.get(url)
     data = response.json()
 
-    # Debugging: Print API response structure
-    print("API Response:", data)
+    print("API Response:", data)  # Debugging: See actual API data
 
     try:
         rates = data.get("rates", {})
@@ -32,10 +31,10 @@ def index():
     try:
         data = request.get_json()
 
-        # Extract values safely
-        source_currency = data['queryResult']['parameters']['unit-currency']['currency'].upper()
-        amount = data['queryResult']['parameters']['unit-currency']['amount']
-        target_currency = data['queryResult']['parameters']['currency-name'].upper()
+        # Extract values safely (Fix: Handle lists correctly)
+        source_currency = data['queryResult']['parameters']['unit-currency'][0]['currency'].upper()
+        amount = data['queryResult']['parameters']['unit-currency'][0]['amount']
+        target_currency = data['queryResult']['parameters']['currency-name'][0].upper()
 
         # Get conversion rate
         conversion_rate = fetch_conversion_rate(source_currency, target_currency)
