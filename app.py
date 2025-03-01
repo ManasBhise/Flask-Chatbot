@@ -9,21 +9,26 @@ def fetch_conversion_factor(source, target):
     
     response = requests.get(url)
     data = response.json()
-    
-    if "rates" in data:
+
+    # Debugging: Print API response to check structure
+    print("API Response:", data)
+
+    if isinstance(data, dict) and "rates" in data:
         rates = data["rates"]
-        if source in rates and target in rates:
+
+        if isinstance(rates, dict) and source in rates and target in rates:
             source_rate = float(rates[source])
             target_rate = float(rates[target])
             return target_rate / source_rate  # Correct conversion formula
-    
+
     return None  # Return None if conversion is not possible
 
 @app.route('/', methods=['POST'])
 def index():
     try:
         data = request.get_json()
-        
+        print("Received Data:", data)  # Debugging: Check incoming request data
+
         # Extract parameters from Dialogflow request
         source_currency = data['queryResult']['parameters']['unit-currency']['currency']
         amount = float(data['queryResult']['parameters']['unit-currency']['amount'])
@@ -41,6 +46,7 @@ def index():
         return jsonify({'fulfillmentText': response_text})
     
     except Exception as e:
+        print("Error:", str(e))  # Debugging: Print the error
         return jsonify({'fulfillmentText': f"An error occurred: {str(e)}"})
 
 if __name__ == '__main__':
