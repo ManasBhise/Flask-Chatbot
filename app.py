@@ -9,16 +9,20 @@ def index():
         # Extract data from Dialogflow request
         data = request.get_json()
 
-        # Handling cases where 'unit-currency' might be a list
+        # Get unit-currency safely
         unit_currency = data['queryResult']['parameters'].get('unit-currency', {})
 
-        if isinstance(unit_currency, list) and len(unit_currency) > 0:
-            unit_currency = unit_currency[0]  # Extract first element if it's a list
+        # Ensure unit_currency is a dictionary, not a list
+        if isinstance(unit_currency, list):
+            if len(unit_currency) > 0 and isinstance(unit_currency[0], dict):
+                unit_currency = unit_currency[0]  # Extract first dictionary if it's a list
+            else:
+                return jsonify({'fulfillmentText': "Invalid currency format received."})
 
-        # Safely extract values
-        source_currency = unit_currency.get('currency', None)
-        amount = unit_currency.get('amount', None)
-        target_currency = data['queryResult']['parameters'].get('currency-name', None)
+        # Extract values safely
+        source_currency = unit_currency.get('currency')
+        amount = unit_currency.get('amount')
+        target_currency = data['queryResult']['parameters'].get('currency-name')
 
         # Validate input
         if not source_currency or not amount or not target_currency:
