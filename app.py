@@ -3,8 +3,8 @@ import requests
 
 app = Flask(__name__)
 
-# Function to fetch the conversion rate
-def fetch_conversion_factor(source, target):
+# Function to fetch conversion rate
+def fetch_conversion_rate(source, target):
     url = "https://api.currencyfreaks.com/v2.0/rates/latest?apikey=2aeff7dd1ab84fcba58d4b8606530379"
     
     response = requests.get(url)
@@ -13,19 +13,19 @@ def fetch_conversion_factor(source, target):
     # Debugging: Print API response structure
     print("API Response:", data)
 
-    # Ensure API returns rates
-    if "rates" in data:
-        rates = data["rates"]
+    try:
+        rates = data.get("rates", {})
+        source_rate = float(rates.get(source, 0))
+        target_rate = float(rates.get(target, 0))
 
-        if source in rates and target in rates:
-            source_rate = float(rates[source])
-            target_rate = float(rates[target])
-
-            return target_rate / source_rate  # Conversion factor
-        else:
+        if source_rate == 0 or target_rate == 0:
             return None  # Invalid currency
 
-    return None  # Handle API structure errors
+        return target_rate / source_rate  # Conversion factor
+
+    except Exception as e:
+        print("Error fetching rates:", str(e))
+        return None  # Handle API errors
 
 @app.route("/", methods=["POST"])
 def index():
@@ -37,12 +37,12 @@ def index():
         amount = data['queryResult']['parameters']['unit-currency']['amount']
         target_currency = data['queryResult']['parameters']['currency-name'].upper()
 
-        # Get conversion factor
-        cf = fetch_conversion_factor(source_currency, target_currency)
-        if cf is None:
+        # Get conversion rate
+        conversion_rate = fetch_conversion_rate(source_currency, target_currency)
+        if conversion_rate is None:
             return jsonify({"fulfillmentText": "Invalid currency or conversion rate not available."})
 
-        final_amount = round(amount * cf, 2)
+        final_amount = round(amount * conversion_rate, 2)
 
         # Response format
         response = {
